@@ -335,7 +335,34 @@ endif(NOT WIN32)
 #
 check_function_exists(strerror HAVE_STRERROR)
 check_function_exists(strerror_r HAVE_STRERROR_R)
-check_function_exists(strerror_s HAVE_STRERROR_S)
+if(HAVE_STRERROR_R)
+    #
+    # We have strerror_r; if we define _GNU_SOURCE, is it a
+    # POSIX-compliant strerror_r() or a GNU strerror_r()?
+    #
+    check_c_source_compiles(
+"#define _GNU_SOURCE
+#include <string.h>
+
+/* Define it GNU-style; that will cause an error if it's not GNU-style */
+extern char *strerror_r(int, char *, size_t);
+
+int
+main(void)
+{
+	return 0;
+}
+"
+            HAVE_GNU_STRERROR_R)
+    if(NOT HAVE_GNU_STRERROR_R)
+        set(HAVE_POSIX_STRERROR_R YES)
+    endif(NOT HAVE_GNU_STRERROR_R)
+else(HAVE_STRERROR_R)
+    #
+    # We don't have strerror_r; do we have strerror_s?
+    #
+    check_function_exists(strerror_s HAVE_STRERROR_S)
+endif(HAVE_STRERROR_R)
 check_function_exists(strlcpy HAVE_STRLCPY)
 check_function_exists(strlcat HAVE_STRLCAT)
 check_function_exists(snprintf HAVE_SNPRINTF)
@@ -410,10 +437,18 @@ else(WIN32)
             #
             set(PCAP_LINK_LIBRARIES socket nsl ${PCAP_LINK_LIBRARIES})
         else(LIBSOCKET_HAS_GETADDRINFO)
-            #
-            # We didn't find it.
-            #
-            message(FATAL_ERROR "getaddrinfo is required, but wasn't found")
+            check_library_exists(network getaddrinfo "" LIBNETWORK_HAS_GETADDRINFO)
+            if(LIBNETWORK_HAS_GETADDRINFO)
+                #
+                # OK, we found it in libnetwork (Haiku).
+                #
+                set(PCAP_LINK_LIBRARIES network ${PCAP_LINK_LIBRARIES})
+            else(LIBNETWORK_HAS_GETADDRINFO)
+                #
+                # We didn't find it.
+                #
+                message(FATAL_ERROR "getaddrinfo is required, but wasn't found")
+            endif(LIBNETWORK_HAS_GETADDRINFO)
         endif(LIBSOCKET_HAS_GETADDRINFO)
 
         #
@@ -1062,6 +1097,7 @@ else()
         check_include_file(linux/socket.h HAVE_LINUX_SOCKET_H)
         check_include_file(net/raw.h HAVE_NET_RAW_H)
         check_include_file(sys/dlpi.h HAVE_SYS_DLPI_H)
+        check_include_file(config/HaikuConfig.h HAVE_CONFIG_HAIKUCONFIG_H)
 
         if(BPF_H_DEFINES_BIOCSETIF)
             #
@@ -1105,6 +1141,11 @@ else()
             # DLPI on pre-Solaris 11 SunOS 5, HP-UX, possibly others.
             #
             set(PCAP_TYPE dlpi)
+        elseif(HAVE_CONFIG_HAIKUCONFIG_H)
+            #
+            # Haiku.
+            #
+            set(PCAP_TYPE haiku)
         else()
             #
             # Nothing we support.
@@ -1273,13 +1314,23 @@ else(WIN32)
             check_type_size("struct BPF_TIMEVAL" STRUCT_BPF_TIMEVAL)
         endif()
         cmake_pop_check_state()
+    elseif(PCAP_TYPE STREQUAL "haiku")
+        #
+        # Check for some headers just in case.
+        #
+        check_include_files("net/if.h;net/if_dl.h;net/if_types.h" HAVE_NET_IF_TYPES_H)
+        set(PCAP_SRC pcap-${PCAP_TYPE}.cpp)
     elseif(PCAP_TYPE STREQUAL "null")
     else()
         message(FATAL_ERROR "${PCAP_TYPE} is not a valid pcap type")
     endif()
 endif(WIN32)
 
-set(PROJECT_SOURCE_LIST_C ${PROJECT_SOURCE_LIST_C} pcap-${PCAP_TYPE}.c)
+if(NOT DEFINED PCAP_SRC)
+set(PCAP_SRC pcap-${PCAP_TYPE}.c)
+endif()
+
+set(PROJECT_SOURCE_LIST_C ${PROJECT_SOURCE_LIST_C} ${PCAP_SRC})
 
 #
 # Now figure out how we get a list of interfaces and addresses,
@@ -2040,6 +2091,11 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "SunOS" AND CMAKE_SYSTEM_VERSION MATCHES "5[.]
         set(MAN_MISC_INFO 5)
         set(MAN_DEVICES 7D)
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    #
+    # Haiku needs _BSD_SOURCE for the _IO* macros because it doesn't use them.
+    #
+    add_definitions(-D_BSD_SOURCE)
 endif()
 
 source_group("Source Files" FILES ${PROJECT_SOURCE_LIST_C})
@@ -2091,6 +2147,16 @@ if(BUILD_SHARED_LIBS)
     add_dependencies(${LIBRARY_NAME} SerializeTarget)
     set_target_properties(${LIBRARY_NAME} PROPERTIES
         COMPILE_DEFINITIONS BUILDING_PCAP)
+    #
+    # No matter what the library is called - it might be called "wpcap"
+    # in a Windows build - the symbol to define to indicate that we're
+    # building the library, rather than a program using the library,
+    # and thus that we're exporting functions defined in our public
+    # header files, rather than importing those functions, is
+    # pcap_EXPORTS.
+    #
+    set_target_properties(${LIBRARY_NAME} PROPERTIES
+        DEFINE_SYMBOL pcap_EXPORTS)
     if(NOT "${SANITIZER_FLAGS}" STREQUAL "")
         set_target_properties(${LIBRARY_NAME} PROPERTIES
             LINK_FLAGS "${SANITIZER_FLAGS}")

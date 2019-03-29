@@ -1774,7 +1774,12 @@ pcap_parse_source(const char *source, char **schemep, char **userinfop,
 			 * Treat verything up to the closing square
 			 * bracket as the IP-Literal; we don't worry
 			 * about whether it's a valid IPv6address or
-			 * IPvFuture.
+			 * IPvFuture (or an IPv4address, for that
+			 * matter, just in case we get handed a
+			 * URL with an IPv4 IP-Literal, of the sort
+			 * that pcap_createsrcstr() used to generate,
+			 * and that pcap_parsesrcstr(), in the original
+			 * WinPcap code, accepted).
 			 */
 			bracketp = strchr(parsep, ']');
 			if (bracketp == NULL) {
@@ -3008,7 +3013,7 @@ static struct dlt_choice dlt_choices[] = {
 	DLT_CHOICE(GPF_T, "GPF-T"),
 	DLT_CHOICE(GPF_F, "GPF-F"),
 	DLT_CHOICE(JUNIPER_PIC_PEER, "Juniper PIC Peer"),
-	DLT_CHOICE(ERF_ETH,	"Ethernet with Endace ERF header"),
+	DLT_CHOICE(ERF_ETH, "Ethernet with Endace ERF header"),
 	DLT_CHOICE(ERF_POS, "Packet-over-SONET with Endace ERF header"),
 	DLT_CHOICE(LINUX_LAPD, "Linux vISDN LAPD"),
 	DLT_CHOICE(JUNIPER_ETHER, "Juniper Ethernet"),
@@ -3032,10 +3037,11 @@ static struct dlt_choice dlt_choices[] = {
 	DLT_CHOICE(SITA, "SITA pseudo-header"),
 	DLT_CHOICE(ERF, "Endace ERF header"),
 	DLT_CHOICE(RAIF1, "Ethernet with u10 Networks pseudo-header"),
-	DLT_CHOICE(IPMB, "IPMB"),
+	DLT_CHOICE(IPMB_KONTRON, "IPMB with Kontron pseudo-header"),
 	DLT_CHOICE(JUNIPER_ST, "Juniper Secure Tunnel"),
 	DLT_CHOICE(BLUETOOTH_HCI_H4_WITH_PHDR, "Bluetooth HCI UART transport layer plus pseudo-header"),
 	DLT_CHOICE(AX25_KISS, "AX.25 with KISS header"),
+	DLT_CHOICE(IPMB_LINUX, "IPMB with Linux/Pigeon Point pseudo-header"),
 	DLT_CHOICE(IEEE802_15_4_NONASK_PHY, "IEEE 802.15.4 with non-ASK PHY data"),
 	DLT_CHOICE(MPLS, "MPLS with label as link-layer header"),
 	DLT_CHOICE(LINUX_EVDEV, "Linux evdev events"),

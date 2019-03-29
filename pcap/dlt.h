@@ -769,11 +769,20 @@
 #define DLT_RAIF1		198
 
 /*
- * IPMB packet for IPMI, beginning with the I2C slave address, followed
- * by the netFn and LUN, etc..  Requested by Chanthy Toeung
- * <chanthy.toeung@ca.kontron.com>.
+ * IPMB packet for IPMI, beginning with a 2-byte header, followed by
+ * the I2C slave address, followed by the netFn and LUN, etc..
+ * Requested by Chanthy Toeung <chanthy.toeung@ca.kontron.com>.
+ *
+ * XXX - this used to be called DLT_IPMB, back when we got the
+ * impression from the email thread requesting it that the packet
+ * had no extra 2-byte header.  We've renamed it; if anybody used
+ * DLT_IPMB and assumed no 2-byte header, this will cause the compile
+ * to fail, at which point we'll have to figure out what to do about
+ * the two header types using the same DLT_/LINKTYPE_ value.  If that
+ * doesn't happen, we'll assume nobody used it and that the redefinition
+ * is safe.
  */
-#define DLT_IPMB		199
+#define DLT_IPMB_KONTRON	199
 
 /*
  * Juniper-private data link type, as per request from
@@ -1433,6 +1442,14 @@
 #define DLT_DSA_TAG_BRCM_PREPEND	282
 
 /*
+ * IEEE 802.15.4 with pseudo-header and optional meta-data TLVs, PHY payload
+ * exactly as it appears in the spec (no padding, no nothing), and FCS if
+ * specified by FCS Type TLV;  requested by James Ko <jck@exegin.com>.
+ * Specification at https://github.com/jkcko/ieee802.15.4-tap
+ */
+#define DLT_IEEE802_15_4_TAP    283
+
+/*
  * In case the code that includes this file (directly or indirectly)
  * has also included OS files that happen to define DLT_MATCHING_MAX,
  * with a different value (perhaps because that OS hasn't picked up
@@ -1442,7 +1459,7 @@
 #ifdef DLT_MATCHING_MAX
 #undef DLT_MATCHING_MAX
 #endif
-#define DLT_MATCHING_MAX	282	/* highest value in the "matching" range */
+#define DLT_MATCHING_MAX	283	/* highest value in the "matching" range */
 
 /*
  * DLT and savefile link type values are split into a class and

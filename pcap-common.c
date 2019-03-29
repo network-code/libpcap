@@ -514,11 +514,20 @@
 #define LINKTYPE_RAIF1		198
 
 /*
- * IPMB packet for IPMI, beginning with the I2C slave address, followed
- * by the netFn and LUN, etc..  Requested by Chanthy Toeung
- * <chanthy.toeung@ca.kontron.com>.
+ * IPMB packet for IPMI, beginning with a 2-byte header, followed by
+ * the I2C slave address, followed by the netFn and LUN, etc..
+ * Requested by Chanthy Toeung <chanthy.toeung@ca.kontron.com>.
+ *
+ * XXX - its DLT_ value used to be called DLT_IPMB, back when we got the
+ * impression from the email thread requesting it that the packet
+ * had no extra 2-byte header.  We've renamed it; if anybody used
+ * DLT_IPMB and assumed no 2-byte header, this will cause the compile
+ * to fail, at which point we'll have to figure out what to do about
+ * the two header types using the same DLT_/LINKTYPE_ value.  If that
+ * doesn't happen, we'll assume nobody used it and that the redefinition
+ * is safe.
  */
-#define LINKTYPE_IPMB		199
+#define LINKTYPE_IPMB_KONTRON	199
 
 /*
  * Juniper-private data link type, as per request from
@@ -936,7 +945,7 @@
  *
  * Requested by Chris Bontje <chris_bontje@selinc.com>.
  */
-#define DLT_RTAC_SERIAL		250
+#define LINKTYPE_RTAC_SERIAL		250
 
 /*
  * Bluetooth Low Energy air interface link-layer packets.
@@ -1147,7 +1156,15 @@
 #define LINKTYPE_DSA_TAG_BRCM	281
 #define LINKTYPE_DSA_TAG_BRCM_PREPEND	282
 
-#define LINKTYPE_MATCHING_MAX	282		/* highest value in the "matching" range */
+/*
+ * IEEE 802.15.4 with pseudo-header and optional meta-data TLVs, PHY payload
+ * exactly as it appears in the spec (no padding, no nothing), and FCS if
+ * specified by FCS Type TLV;  requested by James Ko <jck@exegin.com>.
+ * Specification at https://github.com/jkcko/ieee802.15.4-tap
+ */
+#define LINKTYPE_IEEE802_15_4_TAP       283
+
+#define LINKTYPE_MATCHING_MAX	283		/* highest value in the "matching" range */
 
 /*
  * The DLT_ and LINKTYPE_ values in the "matching" range should be the
